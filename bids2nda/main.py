@@ -24,7 +24,7 @@ from shutil import copy
 
 def get_metadata_for_nifti(bids_root, path):
 
-    #TODO support .nii
+    # TODO support .nii
     sidecarJSON = path.replace(".nii.gz", ".json")
 
     pathComponents = os.path.split(sidecarJSON)
@@ -32,8 +32,8 @@ def get_metadata_for_nifti(bids_root, path):
     sessionLevelComponentList = []
     subjectLevelComponentList = []
     topLevelComponentList = []
-    ses = None;
-    sub = None;
+    ses = None
+    sub = None
 
     for filenameComponent in filenameComponents:
         if filenameComponent[:3] != "run":
@@ -50,11 +50,13 @@ def get_metadata_for_nifti(bids_root, path):
     topLevelJSON = os.path.join(bids_root, "_".join(topLevelComponentList))
     potentialJSONs = [topLevelJSON]
 
-    subjectLevelJSON = os.path.join(bids_root, sub, "_".join(subjectLevelComponentList))
+    subjectLevelJSON = os.path.join(
+        bids_root, sub, "_".join(subjectLevelComponentList))
     potentialJSONs.append(subjectLevelJSON)
 
     if ses:
-        sessionLevelJSON = os.path.join(bids_root, sub, ses, "_".join(sessionLevelComponentList))
+        sessionLevelJSON = os.path.join(
+            bids_root, sub, ses, "_".join(sessionLevelComponentList))
         potentialJSONs.append(sessionLevelJSON)
 
     potentialJSONs.append(sidecarJSON)
@@ -126,26 +128,27 @@ def cosine_to_orientation(iop):
 
 def run(args):
 
-    guid_mapping = dict([line.split(" - ") for line in open(args.guid_mapping).read().split("\n") if line != ''])
+    guid_mapping = dict([line.split(
+        " - ") for line in open(args.guid_mapping).read().split("\n") if line != ''])
 
     suffix_to_scan_type = {"dwi": "MR diffusion",
                            "bold": "fMRI",
                            "sbref": "fMRI",
-                           #""MR structural(MPRAGE)",
+                           # ""MR structural(MPRAGE)",
                            "T1w": "MR structural (T1)",
                            "PD": "MR structural (PD)",
                            #"MR structural(FSPGR)",
                            "T2w": "MR structural (T2)",
                            "FLAIR": "FLAIR",
                            "FLASH": "MR structural (FLASH)",
-                           #PET;
-                            #ASL;
-                            #microscopy;
-                            #MR structural(PD, T2);
-                            #MR structural(B0 map);
-                            #MR structural(B1 map);
-                            #single - shell DTI;
-                            #multi - shell DTI;
+                           # PET;
+                           # ASL;
+                           # microscopy;
+                           # MR structural(PD, T2);
+                           # MR structural(B0 map);
+                           # MR structural(B1 map);
+                           # single - shell DTI;
+                           # multi - shell DTI;
                            "epi": "Field Map",
                            "phase1": "Field Map",
                            "phase2": "Field Map",
@@ -160,7 +163,8 @@ def run(args):
                   "sec": "Seconds",
                   "msec": "Milliseconds"}
 
-    participants_df = pd.read_csv(os.path.join(args.bids_directory, "participants.tsv"), header=0, sep="\t")
+    participants_df = pd.read_csv(os.path.join(
+        args.bids_directory, "participants.tsv"), header=0, sep="\t")
 
     image03_dict = OrderedDict()
     for file in glob(os.path.join(args.bids_directory, "sub-*", "*", "sub-*.nii.gz")) + \
@@ -175,9 +179,11 @@ def run(args):
         sub = file.split("sub-")[-1].split("_")[0]
         if "ses-" in file:
             ses = file.split("ses-")[-1].split("_")[0]
-            scans_file = (os.path.join(args.bids_directory, "sub-" + sub, "ses-" + ses, "sub-" + sub + "_ses-" + ses + "_scans.tsv"))
+            scans_file = (os.path.join(args.bids_directory, "sub-" + sub,
+                                       "ses-" + ses, "sub-" + sub + "_ses-" + ses + "_scans.tsv"))
         else:
-            scans_file = (os.path.join(args.bids_directory, "sub-" + sub, "sub-" + sub + "_scans.tsv"))
+            scans_file = (os.path.join(args.bids_directory,
+                                       "sub-" + sub, "sub-" + sub + "_scans.tsv"))
 
         if os.path.exists(scans_file):
             scans_df = pd.read_csv(scans_file, header=0, sep="\t")
@@ -193,10 +199,12 @@ def run(args):
         ndar_date = sdate[1] + "/" + sdate[2].split("T")[0] + "/" + sdate[0]
         dict_append(image03_dict, 'interview_date', ndar_date)
 
-        interview_age = int(round(list(participants_df[participants_df.participant_id == "sub-" + sub].age)[0], 0))*12
+        interview_age = int(round(list(
+            participants_df[participants_df.participant_id == "sub-" + sub].age)[0], 0))*12
         dict_append(image03_dict, 'interview_age', interview_age)
 
-        sex = list(participants_df[participants_df.participant_id == "sub-" + sub].sex)[0]
+        sex = list(
+            participants_df[participants_df.participant_id == "sub-" + sub].sex)[0]
         dict_append(image03_dict, 'gender', sex)
 
         dict_append(image03_dict, 'image_file', file)
@@ -204,10 +212,12 @@ def run(args):
         suffix = file.split("_")[-1].split(".")[0]
         if suffix == "bold":
             description = suffix + " " + metadata["TaskName"]
-            dict_append(image03_dict, 'experiment_id', metadata.get("ExperimentID", ""))
+            dict_append(image03_dict, 'experiment_id',
+                        metadata.get("ExperimentID", args.experiment_id))
         else:
             description = suffix
-            dict_append(image03_dict, 'experiment_id', '')
+            dict_append(image03_dict, 'experiment_id', args.experiment_id)
+
         # Shortcut for the global.const section -- apparently might not be flattened fully
         metadata_const = metadata.get('global', {}).get('const', {})
         dict_append(image03_dict, 'image_description', description)
@@ -215,13 +225,19 @@ def run(args):
         dict_append(image03_dict, 'scan_object', "Live")
         dict_append(image03_dict, 'image_file_format', "NIFTI")
         dict_append(image03_dict, 'image_modality', "MRI")
-        dict_append(image03_dict, 'scanner_manufacturer_pd', metadata.get("Manufacturer", ""))
-        dict_append(image03_dict, 'scanner_type_pd', metadata.get("ManufacturersModelName", ""))
-        dict_append(image03_dict, 'scanner_software_versions_pd', metadata.get("SoftwareVersions", ""))
-        dict_append(image03_dict, 'magnetic_field_strength', metadata.get("MagneticFieldStrength", ""))
-        dict_append(image03_dict, 'mri_echo_time_pd', metadata.get("EchoTime", ""))
+        dict_append(image03_dict, 'scanner_manufacturer_pd',
+                    metadata.get("Manufacturer", ""))
+        dict_append(image03_dict, 'scanner_type_pd',
+                    metadata.get("ManufacturersModelName", ""))
+        dict_append(image03_dict, 'scanner_software_versions_pd',
+                    metadata.get("SoftwareVersions", ""))
+        dict_append(image03_dict, 'magnetic_field_strength',
+                    metadata.get("MagneticFieldStrength", ""))
+        dict_append(image03_dict, 'mri_echo_time_pd',
+                    metadata.get("EchoTime", ""))
         dict_append(image03_dict, 'flip_angle', metadata.get("FlipAngle", ""))
-        dict_append(image03_dict, 'receive_coil', metadata.get("ReceiveCoilName", ""))
+        dict_append(image03_dict, 'receive_coil',
+                    metadata.get("ReceiveCoilName", ""))
         # ImageOrientationPatientDICOM is populated by recent dcm2niix,
         # and ImageOrientationPatient might be provided by exhastive metadata
         # record done by heudiconv
@@ -229,7 +245,8 @@ def run(args):
             'ImageOrientationPatientDICOM',
             metadata_const.get("ImageOrientationPatient", None)
         )
-        dict_append(image03_dict, 'image_orientation', cosine_to_orientation(iop) if iop else '')
+        dict_append(image03_dict, 'image_orientation',
+                    cosine_to_orientation(iop) if iop else '')
 
         dict_append(image03_dict, 'transformation_performed', 'Yes')
         dict_append(image03_dict, 'transformation_type', 'BIDS2NDA')
@@ -255,22 +272,31 @@ def run(args):
             extent4_type = ""
         dict_append(image03_dict, 'extent4_type', extent4_type)
 
-        dict_append(image03_dict, 'acquisition_matrix', "%g x %g" %(nii.shape[0], nii.shape[1]))
+        dict_append(image03_dict, 'acquisition_matrix', "%g x %g" %
+                    (nii.shape[0], nii.shape[1]))
 
-        dict_append(image03_dict, 'image_resolution1', nii.header.get_zooms()[0])
-        dict_append(image03_dict, 'image_resolution2', nii.header.get_zooms()[1])
-        dict_append(image03_dict, 'image_resolution3', nii.header.get_zooms()[2])
-        dict_append(image03_dict, 'image_slice_thickness', metadata_const.get("SliceThickness", nii.header.get_zooms()[2]))
-        dict_append(image03_dict, 'photomet_interpret', metadata.get("global",{}).get("const",{}).get("PhotometricInterpretation",""))
+        dict_append(image03_dict, 'image_resolution1',
+                    nii.header.get_zooms()[0])
+        dict_append(image03_dict, 'image_resolution2',
+                    nii.header.get_zooms()[1])
+        dict_append(image03_dict, 'image_resolution3',
+                    nii.header.get_zooms()[2])
+        dict_append(image03_dict, 'image_slice_thickness', metadata_const.get(
+            "SliceThickness", nii.header.get_zooms()[2]))
+        dict_append(image03_dict, 'photomet_interpret', metadata.get(
+            "global", {}).get("const", {}).get("PhotometricInterpretation", ""))
         if len(nii.shape) > 3:
             image_resolution4 = nii.header.get_zooms()[3]
         else:
             image_resolution4 = ""
         dict_append(image03_dict, 'image_resolution4', image_resolution4)
 
-        dict_append(image03_dict, 'image_unit1', units_dict[nii.header.get_xyzt_units()[0]])
-        dict_append(image03_dict, 'image_unit2', units_dict[nii.header.get_xyzt_units()[0]])
-        dict_append(image03_dict, 'image_unit3', units_dict[nii.header.get_xyzt_units()[0]])
+        dict_append(image03_dict, 'image_unit1',
+                    units_dict[nii.header.get_xyzt_units()[0]])
+        dict_append(image03_dict, 'image_unit2',
+                    units_dict[nii.header.get_xyzt_units()[0]])
+        dict_append(image03_dict, 'image_unit3',
+                    units_dict[nii.header.get_xyzt_units()[0]])
         if len(nii.shape) > 3:
             image_unit4 = units_dict[nii.header.get_xyzt_units()[1]]
             if image_unit4 == "Milliseconds":
@@ -280,14 +306,17 @@ def run(args):
             dict_append(image03_dict, 'mri_repetition_time_pd', TR)
         else:
             image_unit4 = ""
-            dict_append(image03_dict, 'mri_repetition_time_pd', metadata.get("RepetitionTime", ""))
+            dict_append(image03_dict, 'mri_repetition_time_pd',
+                        metadata.get("RepetitionTime", ""))
 
-        dict_append(image03_dict, 'slice_timing', metadata.get("SliceTiming", ""))
+        dict_append(image03_dict, 'slice_timing',
+                    metadata.get("SliceTiming", ""))
         dict_append(image03_dict, 'image_unit4', image_unit4)
 
         dict_append(image03_dict, 'mri_field_of_view_pd', "%g x %g %s" % (nii.header.get_zooms()[0],
-                                                                          nii.header.get_zooms()[1],
-                                                                          units_dict[nii.header.get_xyzt_units()[0]]))
+                                                                          nii.header.get_zooms()[
+            1],
+            units_dict[nii.header.get_xyzt_units()[0]]))
         dict_append(image03_dict, 'patient_position', 'head first-supine')
 
         if file.split(os.sep)[-1].split("_")[1].startswith("ses"):
@@ -302,21 +331,24 @@ def run(args):
             zip_name = fname.split(".")[0] + ".metadata.zip"
             with zipfile.ZipFile(os.path.join(args.output_directory, zip_name), 'w', zipfile.ZIP_DEFLATED) as zipf:
 
-                zipf.writestr(fname.replace(".nii.gz", ".json"), json.dumps(metadata, indent=4, sort_keys=True))
+                zipf.writestr(fname.replace(".nii.gz", ".json"),
+                              json.dumps(metadata, indent=4, sort_keys=True))
                 if suffix == "bold":
-                    #TODO write a more robust function for finding those files
+                    # TODO write a more robust function for finding those files
                     events_file = file.split("_bold")[0] + "_events.tsv"
                     arch_name = os.path.split(events_file)[1]
                     if not os.path.exists(events_file):
                         task_name = file.split("_task-")[1].split("_")[0]
-                        events_file = os.path.join(args.bids_directory, "task-" + task_name + "_events.tsv")
+                        events_file = os.path.join(
+                            args.bids_directory, "task-" + task_name + "_events.tsv")
 
                     if os.path.exists(events_file):
                         zipf.write(events_file, arch_name)
 
-            dict_append(image03_dict, 'data_file2', os.path.join(args.output_directory, zip_name))
+            dict_append(image03_dict, 'data_file2', os.path.join(
+                args.output_directory, zip_name))
             dict_append(image03_dict, 'data_file2_type', "ZIP file with additional metadata from Brain Imaging "
-                                                                "Data Structure (http://bids.neuroimaging.io)")
+                        "Data Structure (http://bids.neuroimaging.io)")
         else:
             dict_append(image03_dict, 'data_file2', "")
             dict_append(image03_dict, 'data_file2_type', "")
@@ -351,7 +383,7 @@ def run(args):
 
         # comply with image03 changes from 12/30/19
         # https://nda.nih.gov/data_structure_history.html?short_name=image03
-        
+
         dict_append(image03_dict, 'deviceserialnumber', "")
         dict_append(image03_dict, 'procdate', "")
         dict_append(image03_dict, 'visnum', "")
@@ -390,6 +422,7 @@ def run(args):
         out_fp.write('"image"\t"3"\n')
         image03_df.to_csv(out_fp, sep="\t", index=False, quoting=csv.QUOTE_ALL)
 
+
 def main():
     class MyParser(argparse.ArgumentParser):
         def error(self, message):
@@ -414,6 +447,10 @@ def main():
         "output_directory",
         help="Directory where NDA files will be stored",
         metavar="OUTPUT_DIRECTORY")
+    parser.add_argument(
+        "experiment_id",
+        help="Experiment ID from NDA",
+        metavar="EXPERIMENT_ID")
     args = parser.parse_args()
 
     run(args)
