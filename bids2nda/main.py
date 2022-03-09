@@ -373,9 +373,14 @@ def run(args):
             # else:
             #     dict_append(image03_dict, 'bvalfile', "")
             # if os.path.exists(bval_file) or os.path.exists(bvec_file):
-            dict_append(image03_dict, 'bvek_bval_files', 'Yes')
+            #     dict_append(image03_dict, 'bvek_bval_files', 'Yes')
             # else:
             #     dict_append(image03_dict, 'bvek_bval_files', 'No')
+
+            dict_append(image03_dict, 'bvek_bval_files', 'Yes')
+            dict_append(image03_dict, 'bvalfile', "")
+            dict_append(image03_dict, 'bvecfile', "")
+
         else:
             dict_append(image03_dict, 'bvecfile', "")
             dict_append(image03_dict, 'bvalfile', "")
